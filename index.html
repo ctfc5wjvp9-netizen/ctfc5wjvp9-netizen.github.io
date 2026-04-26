@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>柴犬迷因史：星際大戰版</title>
+    <style>
+        /* 基礎樣式重設 */
+        body, html {
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            background-color: black;
+            overflow: hidden; /* 防止出現原生滾動條 */
+            font-family: "Century Gothic", Futura, sans-serif; /* 模擬星戰字體風格 */
+            color: #FFE81F; /* 經典星戰黃色 */
+        }
+
+        /* 圖片背景，將 Doge 月球放在右上方 */
+        .background-image {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            /* 請確保將你的圖片命名為 doge_moon.jpg 並與此檔案放在同一個資料夾，或更換為以下網址代碼 */
+            background-image: url('https://i.imgur.com/uU1Lz4I.jpeg'); 
+            background-size: cover;
+            background-position: center;
+            z-index: -1;
+            filter: brightness(0.6); /* 稍微調暗背景以突顯文字 */
+        }
+
+        /* 初始進入介面 */
+        #start-container {
+            position: fixed;
+            width: 100%;
+            height: 100%;
+            background-color: black;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            cursor: pointer;
+            color: white;
+            flex-direction: column;
+            transition: opacity 1s ease-out;
+        }
+        
+        #start-container h2 {
+            font-size: 2em;
+            margin-bottom: 20px;
+            -webkit-text-stroke: 1px #FFE81F;
+            color: black;
+        }
+        
+        .shiba-emoji {
+            font-size: 8em;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.1); opacity: 0.7; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        /* 1. 藍色前言文字 */
+        .intro-text {
+            position: absolute;
+            top: 40%;
+            left: 10%;
+            width: 80%;
+            color: #4BD5EE; /* 經典藍綠色 */
+            font-size: 3vw;
+            font-weight: 400;
+            opacity: 0;
+            animation: introFade 6s ease-out 1s; /* 延遲1秒開始，持續6秒 */
+            z-index: 10;
+        }
+
+        @keyframes introFade {
+            0% { opacity: 0; }
+            20% { opacity: 1; }
+            80% { opacity: 1; }
+            100% { opacity: 0; }
+        }
+
+        /* 2. Doge Logo 動畫 */
+        .logo {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9;
+        }
+
+        .logo h1 {
+            font-size: 18vw;
+            color: black;
+            text-align: center;
+            -webkit-text-stroke: 3px #FFE81F; /* 黃色邊框 */
+            text-stroke: 3px #FFE81F;
+            text-transform: uppercase;
+            letter-spacing: -0.05em;
+            opacity: 0;
+            transform: scale(2.5);
+            animation: logoZoom 10s ease-out 7s; /* 藍色前言結束後開始 */
+        }
+
+        @keyframes logoZoom {
+            0% { opacity: 1; transform: scale(2.5); }
+            80% { opacity: 1; transform: scale(0.1); }
+            100% { opacity: 0; transform: scale(0.1); }
+        }
+
+        /* 3. 滾動字幕容器 (提供透視環境) */
+        .crawl-container {
+            position: absolute;
+            width: 60%;
+            height: 100%;
+            bottom: 0;
+            left: 20%;
+            perspective: 400px; /* 重要：定義3D透視距離 */
+            z-index: 8;
+        }
+
+        /* 滾動文字主體 (進行斜影轉換) */
+        .crawl-content {
+            position: absolute;
+            bottom: 0;
+            width: 100%;
+            transform-origin: 50% 100%; /* 轉換中心點在底部 */
+            transform: rotateX(25deg); /* 重要：延X軸旋轉產生斜影效果 */
+            animation: crawl 90s linear 15s infinite; /* 音樂和標題結束後開始 */
+        }
+
+        /* 字幕文本樣式 */
+        .crawl-content h2 {
+            font-size: 2.5em;
+            text-align: center;
+            text-transform: uppercase;
+            margin-bottom: 0.5em;
+            letter-spacing: 0.1em;
+        }
+
+        .crawl-content h3 {
+            font-size: 1.8em;
+            text-align: center;
+            text-transform: uppercase;
+            margin-bottom: 1.5em;
+        }
+
+        .crawl-content p {
+            font-size: 1.6em;
+            line-height: 1.6em;
+            text-align: justify; /* 兩端對齊，模擬星戰風格 */
+            margin-bottom: 1.5em;
+            font-weight: 600;
+        }
+
+        @keyframes crawl {
+            0% { top: 100vh; transform: rotateX(25deg) translateZ(0); }
+            100% { top: -450vh; transform: rotateX(25deg) translateZ(-1000px); } /* 滾動到上方並逐漸縮小消失 */
+        }
+
+        /* 跳過按鈕 */
+        #skip-btn {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            padding: 10px 20px;
+            background: rgba(255, 232, 31, 0.2);
+            color: #FFE81F;
+            border: 1px solid #FFE81F;
+            cursor: pointer;
+            z-index: 100;
+            opacity: 0;
+            transition: opacity 0.5s;
+        }
+        #skip-btn:hover {
+            background: rgba(255, 232, 31, 0.4);
+        }
+    </style>
+</head>
+<body>
+
+    <div class="background-image"></div>
+
+    <div id="start-container" onclick="startSequence()">
+        <h2>MUCH START</h2>
+        <div class="shiba-emoji">🐕</div>
+        <h2>WOW</h2>
+    </div>
+
+    <audio id="bgm" src="" loop></audio>
+
+    <button id="skip-btn" onclick="skipIntro()">跳過 Wow</button>
+
+    <div class="intro-text" id="intro">
+        很久以前，在一個遙遠的網路角落...<br><br>
+        Wow. <br>
+        Much history. <br>
+        So Doge.
+    </div>
+
+    <div class="logo" id="logo">
+        <h1>DOGE</h1>
+    </div>
+
+    <div class="crawl-container" id="crawl">
+        <div class="crawl-content">
+            <h2>第 1 章</h2>
+            <h3>Wow. Much Origin. So Origin.</h3>
+
+            <p>
+                Wow. 在黑暗的 2010 年代初，一個不具名的日本部落格，發布了一張名為「かぼすちゃん」的柴犬照片。那雙驚恐、困惑又帶著神祕微笑的眼睛，無意間點燃了神聖迷因的火種。 Much start.
+            </p>
+
+            <p>
+                So destiny. 隨著照片飄流到 Reddit 和 Tumblr，網路的智者們開始賦予其靈魂。他們使用一種奇特的「Shibe 思維」——大寫、色彩鮮豔的 Comic Sans 字體，WOW， Much grammar. 這種簡單、無厘頭卻無比療癒的表達方式，瞬間征服了無數的心靈。 Wow.
+            </p>
+
+            <p>
+                Wow. 時代在變。在 2013 年，兩位遠見者（Doge 神聖教父）將這個迷因數位化。Much digital. 於是「多吉幣（Dogecoin）」誕生了。雖然最初是為了諷刺加密貨幣狂潮，但 Doge 的善良和這種「Much Wow」的精神，Wow，讓它擁有了強大的社區力量，Much community. 甚至多次幫助了肯亞的奧運雪橇隊和建設淨水設施。 Wow.
+            </p>
+
+            <p>
+                Wow. 電子，So Doge. 今日，Doge 已不單是柴犬，而是網路文化的燈塔。 Wow. 無論是馬斯克（Memelord-in-Chief）的神祕推文，Wow，還是它那神聖的表情飄向外太空， Wow. 柴犬迷因，Doge的精神——這種無辜、好奇又充滿WOW的生活態度， Wow. 將永遠引導著我們在浩瀚的網路中前進。 Wow.
+            </p>
+            
+            <p style="text-align: center; font-size: 2.5em; margin-top: 2em;">
+                Wow. wow. <br> MUCH CRAWL. <br> Wow. wow.
+            </p>
+        </div>
+    </div>
+
+    <script>
+        const startContainer = document.getElementById('start-container');
+        const bgm = document.getElementById('bgm');
+        const skipBtn = document.getElementById('skip-btn');
+        
+        const sequenceItems = [
+            document.getElementById('intro'),
+            document.getElementById('logo'),
+            document.getElementById('crawl')
+        ];
+
+        let sequenceStarted = false;
+
+        function startSequence() {
+            if (sequenceStarted) return;
+            sequenceStarted = true;
+            
+            startContainer.style.opacity = '0';
+            setTimeout(() => startContainer.style.display = 'none', 1000);
+            
+            bgm.play().catch(error => {
+                console.log("Wow. 音樂自動播放受限，請點擊 Wow 或 Wow Wow Wow Wow Wow.", error);
+            });
+            
+            skipBtn.style.opacity = '1';
+        }
+
+        function skipIntro() {
+            skipBtn.style.display = 'none';
+            // Wow. 跳過所有 Wow Wow Wow.
+            sequenceItems.forEach(item => {
+                if (item) item.style.animation = 'none';
+                if (item && item.querySelector('.crawl-content')) item.querySelector('.crawl-content').style.animation = 'none';
+            });
+            
+            // Wow. 直接將 WOW 字幕 WOW 到上方 Wow Wow Wow Wow Wow.
+            const crawlContent = document.querySelector('.crawl-content');
+            crawlContent.style.top = '-300vh';
+            crawlContent.style.transform = 'rotateX(25deg) translateZ(-800px)';
+        }
+    </script>
+</body>
+</html>
