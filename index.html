@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>軍事準則測驗系統 v2.1</title>
+    <style>
+        :root {
+            --primary-color: #3e4a36; 
+            --secondary-color: #f0f2f0;
+            --accent-color: #b8860b; 
+            --danger-color: #a94442;
+            --success-color: #3c763d;
+        }
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        body {
+            font-family: -apple-system, "Noto Sans TC", "Microsoft JhengHei", sans-serif;
+            background-color: var(--secondary-color);
+            margin: 0; padding: 15px;
+            display: flex; justify-content: center;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+            max-width: 900px;
+            width: 100%;
+            min-height: 85vh;
+            display: flex; flex-direction: column;
+        }
+        h1 { font-size: 1.5rem; color: var(--primary-color); border-left: 5px solid var(--primary-color); padding-left: 10px; margin-bottom: 20px; }
+        
+        .page { display: none; }
+        .active { display: flex; flex-direction: column; flex-grow: 1; }
+
+        .setup-group { margin-bottom: 20px; }
+        .setup-group label { display: block; font-weight: bold; margin-bottom: 8px; color: #444; }
+        input, select { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 1rem; }
+        .range-input { display: flex; gap: 10px; align-items: center; }
+
+        .quiz-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+        .progress-tag { background: #eee; padding: 4px 12px; border-radius: 20px; font-size: 0.9rem; font-weight: bold; }
+        .mark-btn { cursor: pointer; font-size: 1.5rem; background: none; border: none; color: #ccc; transition: 0.2s; padding: 5px; }
+        .mark-btn.marked { color: #f39c12; transform: scale(1.2); }
+        
+        .question-box { font-size: 1.2rem; font-weight: bold; margin-bottom: 15px; line-height: 1.5; color: #333; }
+        .question-symbol { color: var(--accent-color); margin-right: 8px; }
+        
+        textarea {
+            width: 100%; flex-grow: 1; min-height: 200px;
+            padding: 15px; border: 2px solid #ddd; border-radius: 8px;
+            font-size: 1.1rem; line-height: 1.6; margin-bottom: 15px;
+            resize: none; transition: border-color 0.3s;
+        }
+        textarea:focus { border-color: var(--primary-color); outline: none; }
+
+        .btn-group { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 10px; }
+        button {
+            padding: 14px; border-radius: 8px; border: none; font-size: 1rem; font-weight: bold;
+            cursor: pointer; transition: 0.2s;
+        }
+        .btn-primary { background: var(--primary-color); color: white; }
+        .btn-secondary { background: #6c757d; color: white; }
+        .btn-outline { background: white; border: 1px solid #ccc; color: #666; }
+        .btn-danger { background: #a94442; color: white; }
+
+        .feedback { margin-top: 10px; padding: 15px; border-radius: 8px; font-size: 0.95rem; line-height: 1.5; }
+        .correct { background: #dff0d8; color: #3c763d; border: 1px solid #d6e9c6; }
+        .wrong { background: #f2dede; color: #a94442; border: 1px solid #ebccd1; }
+        
+        .result-card { text-align: center; padding: 20px 0; }
+        .score-big { font-size: 3.5rem; color: var(--primary-color); font-weight: 800; margin: 10px 0; }
+        .review-list { margin-top: 20px; text-align: left; }
+        .review-item { padding: 15px; border-bottom: 1px solid #eee; position: relative; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1 id="mainTitle">§ 離線測驗工具 v2.1</h1>
+
+    <div id="page-setup" class="page active">
+        <div class="setup-group">
+            <label>題目範圍 (1-100)</label>
+            <div class="range-input">
+                <input type="number" id="rangeStart" value="1" min="1" max="100">
+                <span>至</span>
+                <input type="number" id="rangeEnd" value="100" min="1" max="100">
+            </div>
+        </div>
+        
+        <div class="setup-group">
+            <label>測驗題數</label>
+            <input type="number" id="quizCount" value="20" min="1" max="100">
+        </div>
+
+        <div class="setup-group">
+            <label>出題順序</label>
+            <select id="orderRule">
+                <option value="random">亂數隨機出題</option>
+                <option value="sequence">依編號順序出題</option>
+            </select>
+        </div>
+
+        <div class="setup-group">
+            <label>模式選擇</label>
+            <select id="mode">
+                <option value="practice">練習模式 (即時解析)</option>
+                <option value="test">測驗模式 (最後結算)</option>
+            </select>
+        </div>
+        <button class="btn-primary" onclick="startQuiz()" style="margin-top: auto;">開始測驗</button>
+    </div>
+
+    <div id="page-quiz" class="page">
+        <div class="quiz-header">
+            <span class="progress-tag" id="progressText">0/0</span>
+            <div>
+                <button id="markBtn" class="mark-btn" onclick="toggleMark()">★</button>
+            </div>
+        </div>
+        <div class="question-box">
+            <span class="question-symbol">§</span><span id="qContent"></span>
+        </div>
+        <textarea id="userInput" placeholder="請在此輸入答案..."></textarea>
+        
+        <div id="liveFeedback" class="feedback" style="display:none"></div>
+
+        <div class="btn-group">
+            <button class="btn-outline" id="prevBtn" onclick="prevQuestion()" disabled>上一題</button>
+            <button class="btn-primary" id="nextBtn" onclick="processStep()">下一題</button>
+        </div>
+        <button class="btn-secondary" onclick="confirmEndQuiz()" style="width: 100%; margin-top: 10px;">結束測驗回到目錄</button>
+    </div>
+
+    <div id="page-result" class="page">
+        <div class="result-card">
+            <div id="resultTitle" style="font-weight: bold;">測驗完成</div>
+            <div class="score-big" id="finalScore">0</div>
+            <p id="scoreDetail"></p>
+        </div>
+        <div class="btn-group">
+            <button class="btn-primary" onclick="location.reload()">重新開始</button>
+            <button class="btn-secondary" id="retryMarkedBtn" onclick="startRetryMarked()">複習標記題</button>
+        </div>
+        <div class="review-list" id="reviewList"></div>
+    </div>
+</div>
+
+<script>
+    const BANK = [{"id": 1, "q": "戰爭型態發展為何?", "a": "戰爭已朝非接觸、非對稱、非線性型態發展，主要體現在「多領域作戰」、「混合式作戰」等多樣化戰爭型態模式。", "source": "陸軍作戰要綱，第一篇第一章第101005條P 1-1-2"}, {"id": 2, "q": "現代戰場用兵，應置重點於何處?", "a": "戰場用兵，應置重點於打擊敵指管系統，破壞聯合作戰關鍵結構，摧毀敵作戰重心，繼以殲滅敵人有生力量。", "source": "陸軍作戰要綱，第一篇第一章第101004條P 1-1-2"}, {"id": 3, "q": "聯合作戰之意義", "a": "統合運用兩個（含）以上不同軍種或不同領域之作戰單位，在明確的指揮管制關係下，執行共同任務，達成同一作戰目的，所遂行之作戰，不論其階層與指揮關係如何，均謂之聯合作戰。", "source": "陸軍作戰要綱，第一篇第三章第103001條P 1-3-15"}, {"id": 4, "q": "兵種協同作戰成功基礎", "a": "統一指揮、充分協調與合作、即時有效指揮管制，為遂行協同作戰成功的基礎與必備條件。", "source": "陸軍作戰要綱，第一篇第三章第103041條P 1-3-30"}, {"id": 5, "q": "打擊部隊作戰目的", "a": "打擊部隊為地面防衛作戰之決勝主力，乘敵登（著）陸立足未穩之際，在海、空軍、陸航、砲兵及守備部隊協力下，以攻勢行動，殲滅進犯敵軍。", "source": "陸軍作戰要綱，第四篇第五章405064條 P 4-5-299"}, {"id": 6, "q": "軍事動員區分為何?", "a": "1、軍隊動員。 2、軍需工業動員。", "source": "陸軍作戰要綱，第一篇第七章第107006條P 1-7-80"}, {"id": 7, "q": "計畫動員種類有哪些?", "a": "1、部隊動員。 2、軍事勤務動員。", "source": "陸軍作戰要綱，第一篇第七章第107007條P 1-7-81"}, {"id": 8, "q": "勤務支援一般原則為何?", "a": "1、後勤為先。 2、先期整備。 3、運輸安全。 4、決心須以勤務能力為基礎。", "source": "陸軍作戰要綱，第一篇第四章第104004條P 1-4-33"}, {"id": 9, "q": "政治作戰特性為何?", "a": "1、以人為中心。 2、以智慧取勝。 3、無時空限制。 4、重視戰場經營。", "source": "陸軍作戰要綱，第一篇第六章第106002條P 1-6-69"}, {"id": 10, "q": "防衛編組意義為何?", "a": "旨在因應防衛作戰需要，分別賦予作戰任務及責任地區，以統合地區內各部隊戰力，達成作戰目的。", "source": "陸軍作戰要綱，第二篇第三章第203016條P 2-3-98"}, {"id": 11, "q": "指揮之意義為何?", "a": "依法授予某個人以掌握與運用軍隊之職責，該個人將其意志變成所屬部隊之行動。", "source": "陸軍作戰要綱，第二篇第四章章第204001條 P 2-4-102"}, {"id": 12, "q": "指揮關係之區分?", "a": "1、建制。 2、編配。 3、配屬。 4、作戰管制。", "source": "陸軍作戰要綱，第二篇第四章第204003條P 2-4-102"}, {"id": 13, "q": "指揮所之區分為?", "a": "1、主指揮所。 2、後方指揮所。 3、機動指揮所。 4、預備指揮所。", "source": "陸軍作戰要綱，第二篇作業程序第204006條P 2-4-104"}, {"id": 14, "q": "指揮所位置選定考量因素為何?", "a": "1、便於指揮掌握，並肆應戰況之推移。 2、與上下級及友軍連絡容易。 3、進出、變換容易，且有足夠之疏散空間 4、有利於警戒、隱（掩）蔽、防空及化生放核防護措施。 5、各種通信、資訊設施建立容易。", "source": "陸軍作戰要綱，第二篇作業程序第204007條P 2-4-104"}, {"id": 15, "q": "指揮掌握之必要手段?", "a": "1、命令。 2、通報。 3、報告。", "source": "陸軍作戰要綱，第二篇作業程序第204009條P 2-4-105"}, {"id": 16, "q": "任務分析之內容為何?", "a": "1、上級指揮官作戰企圖。 2、本部任務與全般作戰關係。 3、為達成任務所應獲取戰果。 4、多重任務或多項目標主從。 5、為達成任務必要手段。", "source": "陸軍作戰要綱，第二篇第四章第204015條P 2-4-107"}, {"id": 17, "q": "預備命令內容應包括哪些事項?", "a": "1、當前狀況與任務。 2、作戰方式及作戰地區範圍。 3、時間管制（初步）。 4、部隊先期運動及偵搜指導。 5、重要作戰準備事項與要求標準。 6、其他重要準備事項。", "source": "陸軍作戰要綱，第二篇第四章第204017條P 2-4-108"}, {"id": 18, "q": "參謀作業指導之內容為何?", "a": "1、任務說明。 2、初步作戰概念宣達。 3、上級指揮官企圖之特別指示。 4、完成任務所應先期準備事項。 5、各參狀況判斷指導（含戰場情報準備作業）。 6、律定召開作戰會議之時間、地點。 7、其他事項。", "source": "陸軍作戰要綱，第二篇第四章第 204018條P 2-4-108"}, {"id": 19, "q": "何謂狀況判斷?", "a": "乃基於任務，針對當前狀況及可能發展，綜合考量各項相關因素，作有系統之分析。", "source": "陸軍作戰要綱，第二篇作業程序第 204019條P 2-4-109"}, {"id": 20, "q": "狀況判斷之目的及區分為何?", "a": "目的在提供建議、輔助指揮官下達決心，可區分為指揮官判斷及參謀判斷。", "source": "陸軍作戰要綱，第二篇作業程序第204019條P 2-4-109"}, {"id": 21, "q": "何謂決心?", "a": "指揮官之決心，乃由指揮官與參謀依狀況判斷而產生之結論，須由指揮官親自為之，為發展作戰構想之基礎，各級幹部應以堅強之意志貫徹。", "source": "陸軍作戰要綱，第二篇作業程序第204020條P 2-4-109"}, {"id": 22, "q": "部隊掌握之基礎為何?", "a": "1、統一戰術思想。 2、示以明確作戰構想。 3、賦予明確任務與作戰企圖。 4、周密靈活通資連絡。 5、下級指揮官適切之獨斷專行。", "source": "陸軍作戰要綱，第二篇作業程序第204028條P 2-4-112"}, {"id": 23, "q": "掌握主動之具體作為為何?", "a": "1、迅確的情報。 2、適切的判斷。 3、優勢的作為。 4、全程作戰構想之儘早確立及謀略 5、欺敵之配合。", "source": "陸軍作戰要綱，第三篇第四章第304004條P 3-4-168"}, {"id": 24, "q": "影響戰局之手段為何?", "a": "1、適時將火力重點指向所望地區。 2、適切使用預備隊。 3、彈性調整部署。 4、靈活轉移兵力，促進作戰進展。", "source": "陸軍作戰要綱，第二篇作業程序第204036條P 2-4-114"}, {"id": 25, "q": "聯合作戰管制之範圍為何?", "a": "1、戰術行動。 2、火力運用。 3、後勤支援。 4、政治作戰。 5、其他足以危害安全之非軍事行動。", "source": "陸軍作戰要綱，第二篇第五章第205005條P 2-5-116"}, {"id": 26, "q": "聯合作戰管制方法為何?", "a": "1、計畫管制。 2、臨機管制。", "source": "陸軍作戰要綱，第二篇第五章第205007條P 2-5-117"}, {"id": 27, "q": "聯合作戰管制指導為何?", "a": "1、確保聯合作戰各部隊作戰計畫、戰術行動及火力運用等，在時空因素上能配合一致、不相牴觸。 2、明確律定部隊行動時間管制表，並督導確實執行。 3、訂定適切之辨別、辨識規定及相互間之通報管道。 4、互派連絡官。", "source": "陸軍作戰要綱，第二篇第五章第205008條P 2-5-117"}, {"id": 28, "q": "空地作戰管制一般原則為何?", "a": "1、區分主從、分層負責。 2、周密協調、確實管制。", "source": "陸軍作戰要綱，第二篇第五章第205014條P 2-5-120"}, {"id": 29, "q": "地面火力管制安全措施?", "a": "禁射線(NFL)、火力支援協調線(FSCL)、自由射擊區(FFA)、限制射擊線(RFL)、火力協調區（FCA）、禁射區(NFA)。", "source": "陸軍作戰要綱，第二篇第五章第205032條P 2-5-128"}, {"id": 30, "q": "地面作戰管制方式為何?", "a": "1、計畫管制。 2、臨機管制。 3、協調後管制。", "source": "陸軍作戰要綱，第二篇第五章第205030條P 2-5-127"}, {"id": 31, "q": "何謂臨機管制?", "a": "對新發現徵候，足以影響戰局或危害部隊安全者，應即修（增）訂計畫，並實施必要管制。", "source": "陸軍作戰要綱，第二篇第五章第205030條P 2-5-127"}, {"id": 32, "q": "何謂計畫管制", "a": "依據作戰計畫中各階段行動，對所管制部隊兵力之運用、時間因素配合及所望戰果，實施嚴密管制。", "source": "陸軍作戰要綱，第二篇第五章第205030條P 2-5-127"}, {"id": 33, "q": "空域管制安全措施為何?", "a": "1、限制射擊空域（RFS）。 2、限航區（RFZ）。 3、空中安全走廊（ASC）。", "source": "陸軍作戰要綱，第二篇第五章第205033條P 2-5-130"}, {"id": 34, "q": "灘岸阻絕區分為何", "a": "水際阻絕、灘際阻絕、岸際阻絕。", "source": "陸軍作戰要綱，第四篇第五章405086條 P 4-5-311"}, {"id": 35, "q": "防衛作戰目的為何?", "a": "其目的在迫使敵奪臺任務失敗，確保我國家安全、維護生存空間。", "source": "陸軍作戰要綱，第四篇第一章第401001條P 4-1-203"}, {"id": 36, "q": "防衛作戰特性為何?", "a": "1、被動性 2、獨立性 3、總體性 4、後發性 5、速決性 6、殲滅性 7、不對稱性", "source": "陸軍作戰要綱，第四篇第一章第401003條P 4-1-203~205"}, {"id": 37, "q": "作戰計畫修訂時機為何?", "a": "一、依既定期程修訂。二、作戰型態、戰術、戰法改變時。三、軍隊組織編裝調整或武器裝備更新時。四、敵情、地形、地物產生變化時。五、計畫經演練發現缺失時。", "source": "陸軍作戰要綱，第四篇第三章第403010條P 4-3-227"}, {"id": 38, "q": "動員編實一般指導為何?", "a": "一、擬定動員計畫，增強整體與持續戰力。二、考量專業技術比例，因應未來作戰需求。三、力求動員地、設籍地與任務地一致。四、主動聯繫、確實核對，落實「編、管、訓、用」合一。", "source": "陸軍作戰要綱，第四篇第三章第403021條P 4-1-232"}, {"id": 39, "q": "地面防衛作戰成功條件為何?", "a": "1、周密整備。 2、全民防衛。 3、戰力防護。 4、灘岸殲敵。 5、連續作戰。", "source": "陸軍作戰要綱，第四篇第一章第401008條P 4-1-206~208"}, {"id": 40, "q": "聯合國土防衛作戰基本概念為何?", "a": "1、獨立守備。 2、分區擊滅。 3、灘岸殲敵。 4、連續反擊。", "source": "陸軍作戰要綱，第四篇第二章第402002條P 4-2-209~211"}, {"id": 41, "q": "地面防衛作戰成敗之關鍵為何?", "a": "灘岸殲敵。", "source": "陸軍作戰要綱，第四篇第二章第402002條P 4-2-211"}, {"id": 42, "q": "聯合國土防衛作戰依量地用兵，區分為幾種地區?", "a": "區分重要守備、次要守備或側方警戒地區。", "source": "陸軍作戰要綱，第四篇第二章第402003條P 4-2-212"}, {"id": 43, "q": "戰備整備之目的?", "a": "目的在堅實戰備，奠定防衛作戰成功之基礎，並能肆應不預期之狀況。", "source": "陸軍作戰要綱，第四篇第三章第403001條P 4-3-223"}, {"id": 44, "q": "防衛作戰計畫區分為何?", "a": "包含戰備整備計畫、戰備規定、應變制變計畫、動員計畫、應急作戰計畫及全面作戰計畫。", "source": "陸軍作戰要綱，第四篇第三章第403004條P 4-3-224"}, {"id": 45, "q": "作戰計畫之策訂考慮因素為何?", "a": "作戰計畫之策定係依據上一級任務及構想（指導）所策定，應考慮任務、敵情、地理特性、我軍狀況及民情等因素。", "source": "陸軍作戰要綱，第四篇第三章第403006條P 4-3-226"}, {"id": 46, "q": "指參作業程序之階段劃分？", "a": "區分「計畫作為」、「準備」與「執行」等三個階段。", "source": "陸軍指揮參謀組織與作業教範(上冊)、第二篇第二章第202013條、 P2-2-32頁"}, {"id": 47, "q": "受領任務後之作業步驟？", "a": "1.將狀況與任務，通知各參謀與作業人員。 2.參謀持續資料蒐整。 3.參謀完成資訊更新。 4.指揮官行初步參謀作業指導。 5.研擬預備命令。", "source": "陸軍指揮參謀組織與作業教範(上冊)、第二篇第二章第202019條、 P2-2-34頁"}, {"id": 48, "q": "行動方案應具備之特性為何？", "a": "1.一致性。 2.可行性。 3.可接受性。 4.獨特性。 5.完整性。", "source": "陸軍指揮參謀組織與作業教範(上冊)、第二篇第二章第202051條、 P2-2-53頁"}, {"id": 49, "q": "行動方案研擬步驟為何？", "a": "1.分析敵、我相對戰力。 2.研擬各種行動方案選項。 3.初步規劃各行動方案所需兵力及部署。 4.研擬各行動方案作戰構想。 5.律定各行動方案任務編組。 6.完成各行動方案文字敘述及圖解標繪。", "source": "陸軍指揮參謀組織與作業教範(上冊)、第二篇第二章第202050條、 P2-2-52頁"}, {"id": 50, "q": "指揮官擬定作戰企圖內心思維為何?", "a": "1.上級指揮官作戰企圖。 2.本部行動與全般作戰關係。 3.為圓滿達成任務所應獲取之戰果。 4.多重目標與多重任務之主從。 5.為達成任務之必要手段。", "source": "陸軍指揮參謀組織與作業教範(上冊)、第二篇第二章第202043條、 P2-2-46頁"}, {"id": 51, "q": "何謂指揮關係?", "a": "指揮官基於權責，對被指揮者所產生之責任關係，謂之指揮關係。", "source": "陸軍指揮參謀組織與作業教範(上冊)、第二篇第二章第101015條、 P1-1-4頁"}, {"id": 52, "q": "何謂支援關係?", "a": "支援關係明示支援與被支援部隊(單位)間之關係與責任。", "source": "陸軍指揮參謀組織與作業教範(上冊)、第二篇第二章第101016條、 P1-1-5頁"}, {"id": 53, "q": "任務分析要旨為何?", "a": "「任務分析」乃指揮官藉參謀之協助，對上級賦予之任務，實施深入理解之過程。", "source": "陸軍指揮參謀組織與作業教範(上冊)、第二篇第二章第202027條、 P2-2-37頁"}, {"id": 54, "q": "任務分析後產生之作業成果主要包含哪些？", "a": "1.戰場情報準備成果。 2.各部隊之作戰能力與限制因素。 3.風險評估事項。 4.核定本部任務。 5.指揮官初步作戰企圖與參謀作業指導。 6.預備命令。 7.行動方案評估要項。", "source": "陸軍指揮參謀組織與作業教範(上冊)、第二篇第二章第202028條、 P2-2-38頁"}, {"id": 55, "q": "指揮程序之內容?", "a": "1.任務分析及初步作戰概念。 2.參謀作業指導。 3.狀況判斷。 4.決心及作戰構想。 5.計畫與命令。 6.督導實施。", "source": "陸軍指揮參謀組織與作業教範(上冊)、第二篇第二章第201019條、 P2-1-9頁"}, {"id": 56, "q": "決心點為何？", "a": "係指在作戰任務執行中，需要下達處置作為有關之「重大事件」或其所在「地點」，亦係指揮官或參謀預期必須下達決心之時、空點(時機)。", "source": "陸軍指揮參謀組織與作業教範(上冊)、第二篇第二章第202070條、 P2-2-67頁"}, {"id": 57, "q": "軍事決心策定之意義？", "a": "在數個我軍行動方案中，尋求可以達成作戰目的「最佳」行動方案之決策過程。", "source": "陸軍指揮參謀組織與作業教範(上冊)、第二篇第二章第202003條、 P2-2-26頁"}, {"id": 58, "q": "軍事決心策定思維程序為何？", "a": "1.確認問題。 2.研擬行動方案。 3.分析及比較行動方案。 4.下達決心。", "source": "陸軍指揮參謀組織與作業教範(上冊)、第二篇第二章第202003條、 P2-2-26頁"}, {"id": 59, "q": "軍事決心策定程序之步驟為何？", "a": "1.受領任務。 2.任務分析。 3.研擬行動方案。 4.分析行動方案。 5.比較行動方案。 6.核准行動方案。 7.頒布計畫(命令)。", "source": "陸軍指揮參謀組織與作業教範(上冊)、第二篇第二章第202004條、 P2-2-27頁"}, {"id": 60, "q": "兵棋推演中，參謀必須針對每項敵可能行動列舉何事項?", "a": "1、重大事件 2、決心點", "source": "陸軍指揮參謀組織與作業教範(上冊)、第二篇第二章第202070條、 P2-2-64頁"}, {"id": 61, "q": "戰場風險管理步驟區分為何？", "a": "1.識別危險因素。 2.評估風險。 3.風險管控方法。 4.風險控制決策。 5.執行風險控制。 6.監督與檢討。", "source": "陸軍指揮參謀組織與作業教範(上冊)、第二篇第六章第206005條、 P2-6-128頁"}, {"id": 62, "q": "風險種類區分？", "a": "1.戰術風險。 2.意外風險。", "source": "陸軍指揮參謀組織與作業教範(上冊)、第二篇第六章第206004條、 P2-6-128頁"}, {"id": 63, "q": "預演的形式概分為何?", "a": "1.全裝預演。 2.減裝預演。 3.沙盤推演。 4.圖上推演。 5.無線電預演。 6.電腦兵棋推演。", "source": "陸軍指揮參謀組織與作業教範(上冊)、第二篇第三章第203018條、 P2-3-105頁"}, {"id": 64, "q": "敵可能行動列舉時應包括哪些？", "a": "1.何時(開始行動時間)。 2.何地(採取行動之地區)。 3.何事(作戰或戰鬥方式與重點指向)。 4.如何(採取行動之兵力大小)。", "source": "陸軍指揮參謀組織與作業教範(上冊)、第三篇第八章第308012條、 P3-8-104頁"}, {"id": 65, "q": "戰場情報準備作業成果為何?", "a": "1.修正後混合障礙透明圖。 2.敵可能行動圖解。 3.徵候圖解及徵候分析表。 4.情報判斷結論部分。", "source": "陸軍指揮參謀組織與作業教範(上冊)、第二篇第二章第202028條、 P2-2-38頁"}, {"id": 66, "q": "兵棋推演成果為何?", "a": "1、決心支援圖解 2、協同計畫管制表 3、決心支援表", "source": "陸軍指揮參謀組織與作業教範(上冊)、第二篇第二章第202076條、 P2-2-74頁"}, {"id": 67, "q": "何謂特定行動？", "a": "由上級賦予、指派交由本單位執行之任務。", "source": "陸軍指揮參謀組織與作業教範(上冊)、第二篇第二章第202032條、 P2-2-40頁"}, {"id": 68, "q": "何謂關鍵行動？", "a": "綜合分析特定行動與推斷行動之必然性、重要性、時序性與限制因素後，即可歸納得出攸關本次作戰成敗之「關鍵行動」。", "source": "陸軍指揮參謀組織與作業教範(上冊)、第二篇第二章第202032條、 P2-2-41頁"}, {"id": 69, "q": "決心簡報時使用何向指揮官實施簡報?", "a": "1、決心支援圖解 2、協同計畫管制表 3、行動方案比較表", "source": "陸軍指揮參謀組織與作業教範(上冊)、第二篇第二章第202088條、 P2-2-83頁"}, {"id": 70, "q": "指揮官重要情報需求中有關我軍及鄰接友軍狀況資訊稱為?", "a": "友軍情資要項（FFIR） 。", "source": "陸軍指揮參謀組織與作業教範(上冊)、第二篇第二章第202037條、 P2-2-43頁"}, {"id": 71, "q": "保密事項、情報蒐集要項及「友軍情資要項通常敘述於計畫（命令）之何處？", "a": "作戰計畫第三段「執行」之協調指示事項內。", "source": "陸軍指揮參謀組織與作業教範(上冊)、第二篇第二章第202037條、 P2-2-43頁"}, {"id": 72, "q": "實施任務分析簡報後指揮官需完成哪些事項，以利後續作業？", "a": "1.核准「本部任務」。 2.宣示其初步「指揮官作戰企圖」。 3.宣達後續之「參謀作業指導」。", "source": "陸軍指揮參謀組織與作業教範(上冊)、第二篇第二章第202041條、 P2-2-44頁"}, {"id": 73, "q": "分析行動方案之要旨為何？", "a": "藉由「分析行動方案」，可檢視出我軍之至當行動方案與最佳兵力編組，方能以最低損耗，獲致最大戰果，達成任務，並對爾後戰局開創有利態勢。", "source": "陸軍指揮參謀組織與作業教範(上冊)、第二篇第二章第202063條、 P2-2-63頁"}, {"id": 74, "q": "兵棋推演模式為何?", "a": "1.帶狀法。 2.區塊法。 3.條狀法。", "source": "陸軍指揮參謀組織與作業教範(上冊)、第二篇第二章第202072條、 P2-2-67頁"}, {"id": 75, "q": "決心點可依據何預判?", "a": "可依據作戰「經驗」與「效程」先行預判", "source": "陸軍指揮參謀組織與作業教範(上冊)、第二篇第二章第202070條、 P2-2-67頁"}, {"id": 76, "q": "評估要項為何？", "a": "係指在兵棋推演過程中，用以衡量行動方案作戰效能之項目，而該等要項將可能影響敵、我雙方作戰成敗之關鍵。", "source": "陸軍指揮參謀組織與作業教範(上冊)、第二篇第一章第202071條、 P2-2-67頁"}, {"id": 77, "q": "兵推之過程運作為何?", "a": "乃遵循「行動」－「反應」－「反制」之循環而運作。", "source": "陸軍指揮參謀組織與作業教範(上冊)、第二篇第二章第202075條、 P2-2-72頁"}, {"id": 78, "q": "簡報分類為何?", "a": "1.任務簡報。 2.戰場(演習)簡報。 3.業務簡報(含資料簡報)。 4.參謀簡報。", "source": "陸軍指揮參謀組織與作業教範(上冊)、第三篇第二章第302005條、 P3-2-5頁"}, {"id": 79, "q": "時間受限下指參作業程序節省時間之主要技巧?", "a": "1.以既有計畫為基礎。 2.增加指揮官親自參與程度。 3.指揮官下達更明確之參謀作業指導。 4.指揮官限制行動方案數量與兵棋推演次數。 5.強化同步計畫作為。 6.善用參謀作業指導。", "source": "陸軍指揮參謀組織與作業教範(上冊)、第二篇第二章第202104條、 P2-2-91~92頁"}, {"id": 80, "q": "督導實施方式為何？", "a": "1.視察。 2.訪問。 3.報告。 4.測驗與驗證。", "source": "陸軍指揮參謀組織與作業教範(上冊)、第二篇第一章第205006條、 P2-5-125頁"}, {"id": 81, "q": "戰場情報準備作業步驟為何？", "a": "1.界定戰場空間。 2.分析作戰地區。 3.評估敵軍威脅。 4.研判敵可能行動。", "source": "陸軍戰場情報準備作業教範(第三版)、01005 條、P1-2頁"}, {"id": 82, "q": "何謂「作戰地區」？", "a": "作戰地區為上級所賦予之作戰範圍，亦為指揮官能運用其現有戰力，以自行直接左右戰局進行之範圍。", "source": "陸軍戰場情報準備作業教範(第三版)、02007 條、P2-4頁"}, {"id": 83, "q": "何謂「利害地區」？", "a": "上級指定區域範圍外，部隊指揮官基於任務，依據能力，配合「敵情偵蒐」與「縱深作戰」手段，針對敵軍潛在可能危害行動，所實施之「偵測」及「防範」作為。", "source": "陸軍戰場情報準備作業教範(第三版)、02010 條、P2-7頁"}, {"id": 84, "q": "地形分析中，地形五大要素為何?", "a": "障礙、接近路線、地形要點、觀測與射擊、隱蔽與掩蔽。", "source": "陸軍戰場情報準備作業教範(第三版)、03008 條、P3-10頁"}, {"id": 85, "q": "何謂障礙？", "a": "「障礙」乃指地面任何天然或人為之地形、地物，足以妨礙觀測、射擊、部隊運動者均屬之。", "source": "陸軍戰場情報準備作業教範(第三版)、03009 條、P3-10頁"}, {"id": 86, "q": "何謂地形要點？", "a": "地形要點即任一地點或地區其攻占或固守，對敵我雙方任一方，具有顯著利益者。", "source": "陸軍戰場情報準備作業教範(第三版)、03017 條、P3-18頁"}, {"id": 87, "q": "何謂接近路線？", "a": "供某一適當大小與類型之部隊，以通達地形要點或目標之適切而便利的運動空間。", "source": "陸軍戰場情報準備作業教範(第三版)、03011 條、P3-14頁"}, {"id": 88, "q": "依何步驟分析接近路線？", "a": "1.標示機動走廊。 2.組合各機動走廊成為接近路線。 3.賦予各接近路線編號。 4.評估接近路線優先順序。", "source": "陸軍戰場情報準備作業教範(第三版)、03011 條、P3-15頁"}, {"id": 89, "q": "何謂高價值目標？", "a": "「高價值目標」係指敵軍指揮官為達成任務所需之主要作戰部隊。", "source": "陸軍戰場情報準備作業教範(第三版)、04015 條、P4-19頁"}, {"id": 90, "q": "何謂高效益目標？", "a": "係我軍達成任務，應摧毀之主要戰力，敵軍失去此一目標後，可有利我軍任務之達成。", "source": "陸軍戰場情報準備作業教範(第三版)、附1-7頁"}, {"id": 91, "q": "聯合兵種營攻擊正面為何", "a": "營之攻擊正面主依第一線展開之連級部隊數量、偵蒐距離及支援火力所涵蓋的範圍來決定，通常概約為２,０００～６, ００公尺。", "source": "聯合兵種營作戰教範第三章第03017條 P3-227"}, {"id": 92, "q": "聯合兵種營防禦正面及縱深為何?", "a": "營防禦正面通常為２,０００～４,０００公尺，縱深為２, ０００～３,０００公尺。", "source": "聯合兵種營作戰教範第三章第03116條P3-303"}, {"id": 93, "q": "攻擊中足以左右戰局之手段為何?", "a": "1、適時有效集中火力。 2、即時投入預備隊。 3、親臨第一線領導攻擊。", "source": "聯合兵種營作戰教範第三章第03030條 P3-237~238"}, {"id": 94, "q": "突穿攻擊區分那些階段?", "a": "1、造成突破口。 2、擴大突破口。 3、奪取最後目標。", "source": "聯合兵種營作戰教範第三章第03037條 P3-240"}, {"id": 95, "q": "包圍攻擊區分那些階段?", "a": "1、完成包圍圈。 2、壓縮包圍圈。 3、分割擊滅。", "source": "聯合兵種營作戰教範第三章第03042條 P3-244~245"}, {"id": 96, "q": "追擊階段區分為何?", "a": "1、戰場追擊。 2、縱隊追擊。", "source": "聯合兵種營作戰教範第三章第03053條 P3-252"}, {"id": 97, "q": "防禦意義與目的為何?", "a": "防禦係藉兵、火力與地形等之利用，拒止、消耗及摧破敵之攻擊，確保防禦地區、爭取時間或待增援部隊到達，以利全般與爾後之作戰。", "source": "聯合兵種營作戰教範第三章第03079條 P3-272~273"}, {"id": 98, "q": "防禦一般要領為何?", "a": "1、善用地形。 2、爭取主動。 3、形成重點。 4、縱深配置。 5、火力殲敵。", "source": "聯合兵種營作戰教範第三章第03083條 P3-274~275"}, {"id": 99, "q": "攻擊時重點指向為何", "a": "1、敵未預期之正面。 2、便於我戰力發揮，而不利於敵戰力發揮之處。 3、敵之側翼、配備間隙、部隊接合部。 4、敵素質低劣部隊。", "source": "聯合兵種營作戰教範第三章第03015條 P3-226"}, {"id": 100, "q": "陣地防禦意義與目的為何?", "a": "陣地防禦係以主力部署於主陣地帶，依火力及逆襲，殲滅敵於陣地前 or 陣地內，以確保防禦地區完整之防禦方式。", "source": "聯合兵種營作戰教範第三章第03110條P3-296"}];
+
+    let quizList = [];
+    let currentIndex = 0;
+    let userState = [];
+
+    function startQuiz() {
+        const start = parseInt(document.getElementById('rangeStart').value) - 1;
+        const end = parseInt(document.getElementById('rangeEnd').value);
+        const countLimit = parseInt(document.getElementById('quizCount').value);
+        const order = document.getElementById('orderRule').value;
+        
+        let pool = BANK.slice(Math.max(0, start), Math.min(BANK.length, end));
+        
+        if (order === 'random') {
+            for (let i = pool.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [pool[i], pool[j]] = [pool[j], pool[i]];
+            }
+        }
+        
+        quizList = pool.slice(0, countLimit);
+        
+        if(quizList.length === 0) {
+            alert("目前選取的範圍沒有題目，請檢查設定！");
+            return;
+        }
+
+        userState = quizList.map(() => ({ answer: "", isMarked: false, score: 0, reviewed: false }));
+        currentIndex = 0;
+        showPage('page-quiz');
+        renderQuestion();
+    }
+
+    function renderQuestion() {
+        const q = quizList[currentIndex];
+        const state = userState[currentIndex];
+        
+        document.getElementById('progressText').innerText = `${currentIndex + 1} / ${quizList.length}`;
+        document.getElementById('qContent').innerText = q.q;
+        document.getElementById('userInput').value = state.answer;
+        
+        document.getElementById('markBtn').classList.toggle('marked', state.isMarked);
+        document.getElementById('prevBtn').disabled = (currentIndex === 0);
+        document.getElementById('nextBtn').innerText = (currentIndex === quizList.length - 1) ? "完成並交卷" : "下一題";
+        
+        const feedback = document.getElementById('liveFeedback');
+        if (document.getElementById('mode').value === 'practice' && state.reviewed) {
+            showPracticeFeedback(state.score);
+        } else {
+            feedback.style.display = 'none';
+        }
+    }
+
+    function processStep() {
+        const input = document.getElementById('userInput').value;
+        userState[currentIndex].answer = input;
+        
+        const mode = document.getElementById('mode').value;
+        const result = calculateScore(input, quizList[currentIndex].a);
+        userState[currentIndex].score = result.points;
+
+        if (mode === 'practice' && !userState[currentIndex].reviewed) {
+            userState[currentIndex].reviewed = true;
+            showPracticeFeedback(result.points);
+            return;
+        }
+
+        if (currentIndex < quizList.length - 1) {
+            currentIndex++;
+            renderQuestion();
+        } else {
+            showResult();
+        }
+    }
+
+    function prevQuestion() {
+        if (currentIndex > 0) {
+            userState[currentIndex].answer = document.getElementById('userInput').value;
+            currentIndex--;
+            renderQuestion();
+        }
+    }
+
+    function confirmEndQuiz() {
+        if (confirm("確定要結束本次測驗並回到目錄嗎？您的進度將不會被保存。")) {
+            location.reload();
+        }
+    }
+
+    function toggleMark() {
+        userState[currentIndex].isMarked = !userState[currentIndex].isMarked;
+        document.getElementById('markBtn').classList.toggle('marked', userState[currentIndex].isMarked);
+    }
+
+    function calculateScore(input, answer) {
+        const clean = (str) => str.replace(/[^\u4e00-\u9fa5a-zA-Z0-9]/g, '');
+        let userParts = input.split(/[\n ,、]/).map(p => clean(p.replace(/^[0-9一二三四五六七]+[.、, \s]*/, ''))).filter(p => p !== '');
+        let correctParts = answer.match(/[1-9一二三四五六七]、/) ? answer.split(/[1-9一二三四五六七]、/) : [answer];
+        correctParts = correctParts.map(p => p.trim()).filter(p => p !== '');
+
+        const partCount = correctParts.length;
+        const weights = { 1:[5], 2:[2,3], 3:[2,2,1], 4:[2,1,1,1], 5:[1,1,1,1,1] }[partCount] || Array(partCount).fill(5/partCount);
+        let totalPoints = 0;
+
+        correctParts.forEach((correct, idx) => {
+            const hasCh = /[\u4e00-\u9fa5]/.test(correct);
+            const isFound = userParts.some(up => {
+                const matchCh = hasCh ? up.match(/[\u4e00-\u9fa5]/g)?.join('').includes(correct.match(/[\u4e00-\u9fa5]/g)?.join('')) : true;
+                return matchCh;
+            });
+            if (isFound) totalPoints += weights[idx];
+        });
+        return { points: Math.round(totalPoints * 10) / 10 };
+    }
+
+    function showPracticeFeedback(pts) {
+        const fb = document.getElementById('liveFeedback');
+        fb.style.display = 'block';
+        fb.className = pts >= 4 ? 'feedback correct' : 'feedback wrong';
+        fb.innerHTML = `<strong>本次評分: ${pts} / 5</strong><br><hr>標準答案：<br>${quizList[currentIndex].a}`;
+    }
+
+    function showResult() {
+        showPage('page-result');
+        let total = userState.reduce((sum, s) => sum + s.score, 0);
+        document.getElementById('finalScore').innerText = total.toFixed(1);
+        document.getElementById('scoreDetail').innerText = `滿分 ${quizList.length * 5}`;
+        
+        const list = document.getElementById('reviewList');
+        list.innerHTML = '<h3>測驗結果回顧</h3>';
+        quizList.forEach((q, i) => {
+            const s = userState[i];
+            const item = document.createElement('div');
+            item.className = `review-item`;
+            item.innerHTML = `<strong>#${q.id} ${q.q}</strong> (${s.isMarked ? '★':''})<br><span style="color:${s.score >= 4 ? 'green':'red'}">得分: ${s.score}</span><br>標準答案: ${q.a}`;
+            list.appendChild(item);
+        });
+        document.getElementById('retryMarkedBtn').style.display = userState.some(s => s.isMarked) ? 'block' : 'none';
+    }
+
+    function startRetryMarked() {
+        const markedIndices = userState.map((s, i) => s.isMarked ? i : -1).filter(i => i !== -1);
+        quizList = markedIndices.map(i => quizList[i]);
+        userState = quizList.map(() => ({ answer: "", isMarked: true, score: 0, reviewed: false }));
+        currentIndex = 0;
+        showPage('page-quiz');
+        renderQuestion();
+    }
+
+    function showPage(id) {
+        document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+        document.getElementById(id).classList.add('active');
+    }
+</script>
+
+</body>
+</html>
